@@ -3,10 +3,14 @@ from openai import OpenAI
 import json
 import re
 
-# Initialize OpenAI client
+
+# Αρχικοποίηση OpenAI 
+
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
-# Class για τα αποτελέσματα ανάλυσης
+
+# Κλάση για τα αποτελέσματα ανάλυσης
+
 class DiseaseAnalysis:
     def __init__(self, symptoms, possible_diseases, explanation, recommended_actions):
         self.symptoms = symptoms
@@ -14,7 +18,9 @@ class DiseaseAnalysis:
         self.explanation = explanation
         self.recommended_actions = recommended_actions
 
-# Function to safely parse GPT JSON responses
+
+# Function για ασφαλές parsing JSON από το GPT
+
 def safe_parse_json(gpt_text):
     match = re.search(r'{.*}', gpt_text, re.DOTALL)
     if match:
@@ -24,18 +30,20 @@ def safe_parse_json(gpt_text):
             return None
     return None
 
-# Function to analyze symptoms using GPT
+
+# Function που στέλνει τα συμπτώματα στο GPT για ανάλυση
+
 def analyze_symptoms(symptoms_input):
     gpt_prompt = '''
-Generate a JSON response analyzing the patient's symptoms. 
-Include possible diseases, explanation, and recommended actions. 
-Format:
+Δημιούργησε ένα JSON με ανάλυση των συμπτωμάτων του ασθενούς. 
+Πρέπει να περιλαμβάνει πιθανές ασθένειες, εξήγηση και προτεινόμενες ενέργειες.
+Μορφή JSON:
 
 {
-  "Symptoms": "List of symptoms",
-  "PossibleDiseases": ["Disease1", "Disease2"],
-  "Explanation": "Explanation of why these diseases are considered",
-  "RecommendedActions": "Suggested actions like consulting a doctor, tests, lifestyle changes, etc."
+  "Symptoms": "Λίστα συμπτωμάτων",
+  "PossibleDiseases": ["Ασθένεια1", "Ασθένεια2"],
+  "Explanation": "Εξήγηση γιατί αυτές οι ασθένειες επιλέχθηκαν",
+  "RecommendedActions": "Προτεινόμενες ενέργειες όπως επίσκεψη γιατρού, εξετάσεις, lifestyle changes κλπ."
 }
 '''
     try:
@@ -43,55 +51,59 @@ Format:
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": gpt_prompt},
-                {"role": "user", "content": f"Analyze these symptoms: {symptoms_input}"}
+                {"role": "user", "content": f"Ανάλυσε τα εξής συμπτώματα: {symptoms_input}"}
             ]
         )
         gpt_text = response.choices[0].message.content
         gpt_response = safe_parse_json(gpt_text)
         if gpt_response:
-            analysis = DiseaseAnalysis(
+            return DiseaseAnalysis(
                 symptoms=gpt_response["Symptoms"],
                 possible_diseases=gpt_response["PossibleDiseases"],
                 explanation=gpt_response.get("Explanation", ""),
                 recommended_actions=gpt_response.get("RecommendedActions", "")
             )
-            return analysis
         else:
-            st.error("Failed to parse GPT response. Try again.")
+            st.error("Δεν ήταν δυνατή η ανάγνωση της απάντησης από το GPT.")
             return None
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.error(f"Παρουσιάστηκε σφάλμα: {str(e)}")
         return None
 
+
 # Streamlit UI
-st.title("🩺 Healthcare Disease Analysis App")
-st.write("Enter your symptoms and get a possible analysis of diseases and recommended actions.")
 
-# Input symptoms
-symptoms_input = st.text_area("Enter your symptoms (comma-separated or description):")
+st.title(" Εφαρμογή Ανάλυσης Συμπτωμάτων")
+st.write("Πληκτρολογήστε τα συμπτώματά σας ώστε να λάβετε πιθανές ασθένειες και προτεινόμενες ενέργειες.")
 
-if st.button("Analyze Symptoms"):
-    if symptoms_input.strip():
-        analysis = analyze_symptoms(symptoms_input)
-        if analysis:
-            st.subheader("🔹 Analysis Results")
-            st.write(f"**Symptoms:** {analysis.symptoms}")
-            st.write(f"**Possible Diseases:** {', '.join(analysis.possible_diseases)}")
-            st.write(f"**Explanation:** {analysis.explanation}")
-            st.write(f"**Recommended Actions:** {analysis.recommended_actions}")
-    else:
-        st.warning("Please enter your symptoms first.")
+# Πλαίσιο εισαγωγής συμπτωμάτων
+symptoms_input = st.text_area("Συμπτώματα (π.χ. πυρετός, βήχας, πονοκέφαλος):")
 
-# Optional: Keep history of analyses in session_state
+# Αρχικοποίηση ιστορικού στο session_state
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-if symptoms_input.strip() and analysis:
-    st.session_state.history.append(analysis)
+# Κουμπί ανάλυσης συμπτωμάτων
+if st.button("Ανάλυση Συμπτωμάτων"):
+    if symptoms_input.strip():
+        analysis = analyze_symptoms(symptoms_input)
+        if analysis:
+            # Αποθήκευση ανάλυσης στο ιστορικό
+            st.session_state.history.append(analysis)
 
+            # Εμφάνιση αποτελεσμάτων
+            st.subheader("🔹 Αποτελέσματα Ανάλυσης")
+            st.write(f"**Συμπτώματα:** {analysis.symptoms}")
+            st.write(f"**Πιθανές Ασθένειες:** {', '.join(analysis.possible_diseases)}")
+            st.write(f"**Εξήγηση:** {analysis.explanation}")
+            st.write(f"**Προτεινόμενες Ενέργειες:** {analysis.recommended_actions}")
+    else:
+        st.warning("Παρακαλώ εισάγετε τα συμπτώματά σας πρώτα.")
+
+# Εμφάνιση ιστορικού προηγούμενων αναλύσεων
 if st.session_state.history:
-    st.subheader("🕘 Previous Analyses")
+    st.subheader("🕘 Προηγούμενες Αναλύσεις")
     for idx, item in enumerate(st.session_state.history[::-1], 1):
-        st.write(f"**{idx}. Symptoms:** {item.symptoms}")
-        st.write(f"**Possible Diseases:** {', '.join(item.possible_diseases)}")
+        st.write(f"**{idx}. Συμπτώματα:** {item.symptoms}")
+        st.write(f"**Πιθανές Ασθένειες:** {', '.join(item.possible_diseases)}")
         st.write("---")
