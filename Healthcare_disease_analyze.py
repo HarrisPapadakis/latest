@@ -108,3 +108,4 @@ if st.session_state.history:
         st.write(f"**Πιθανές Ασθένειες:** {', '.join(item.possible_diseases)}")
         st.write("---")
 
+
