@@ -339,7 +339,7 @@ class MatchesFrame(ctk.CTkFrame):
         self.tree.pack(fill="both", expand=True)
 
     def _get_season_names(self):
-        seasons = SeasonDAO.get_all()
+        season_names = SeasonDAO.get_all_names() or ["2024-2025"]
         return [s['name'] for s in seasons] if seasons else ["—"]
 
     def refresh(self):
@@ -1067,7 +1067,7 @@ class StatsFrame(ctk.CTkFrame):
         self.text_box.pack(fill="both", expand=True, padx=24, pady=(0, 20))
 
     def refresh(self):
-        seasons = SeasonDAO.get_all()
+        season_names = SeasonDAO.get_all_names() or ["2024-2025"]
         self.season_combo.configure(values=[s['name'] for s in seasons] or ["—"])
         sel = self.season_combo.get()
         with get_connection() as conn:
