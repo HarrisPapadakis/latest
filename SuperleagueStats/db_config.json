@@ -1,0 +1,8 @@
+{
+  "engine": "mariadb",
+  "host": "localhost",
+  "port": 3306,
+  "database": "superleague_greece",
+  "user": "superleague",
+  "password": "nano1545"
+}
